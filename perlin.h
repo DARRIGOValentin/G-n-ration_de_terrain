@@ -189,14 +189,10 @@ py_noise3(float x, float y, float z, const int octaves, const float persistence,
     return 0;
 }
 
-vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
+vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step, int octaves, float persistence, float lacunarity ) {
 
     vector<vector<QVector3D>> grid;
     vector<QVector3D> line;
-
-    int octaves = 6;
-    float persistence = 0.5;
-    float lacunarity = 2.0;
 
 
     for(int y = 0;  y < rows*step; y++){
@@ -209,7 +205,7 @@ vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
 
 
             //float zp = noise2(xp, yp, 1024, 1024, 0);
-            float zp = py_noise2(xp, yp,  8, 0.5, 2.0f, 1024, 1024, 0);
+            float zp = py_noise2(xp, yp,  octaves, persistence, lacunarity, 1024, 1024, 0);
 
 
             //line.push_back(Vector3(xp- (scale/step)/2, yp- (scale/step)/2, zp));
@@ -223,7 +219,7 @@ vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
     return grid;
 }
 
-vector<vector<QVector3D>> generePlanete(int meridien, int parallele) {
+/*vector<vector<QVector3D>> generePlanete(int meridien, int parallele) {
 
     vector<vector<QVector3D>> grid;
     vector<QVector3D> line;
@@ -255,7 +251,7 @@ vector<vector<QVector3D>> generePlanete(int meridien, int parallele) {
     }
 
     return grid;
-}
+}*/
 
 
 
