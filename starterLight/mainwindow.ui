@@ -66,6 +66,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="pushButton_DiamantCarre">
+         <property name="text">
+          <string>Générer mesh Diamant Carré</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

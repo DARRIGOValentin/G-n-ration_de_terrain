@@ -159,15 +159,100 @@ void MainWindow::on_pushButton_generer_clicked()
         mesh.set_color(fh,calcColor(&mesh, fh));
     }
 
+     displayMesh(&mesh);
+}
 
+void MainWindow::on_pushButton_DiamantCarre_clicked()
+{
+
+    MyMesh mesh;
+
+    vector<vector<QVector3D>> terrain  = genereTerrainDiamantCarre(5, -0.1, 0.1, 1);
+
+    int cols =terrain[0].size();
+    int rows = terrain.size();
+
+    //on va ajouter les points du terrain
+    //dans un tableau de VertexHandle sommets
+    vector<MyMesh::VertexHandle> sommets;
+    vector<float> xs, ys, zs;
+
+    vector<MyMesh::VertexHandle> line;
+    for(int i = 0, n = terrain[0].size(); i < n; i++){
+        line.clear();
+        for(int j = 0, m = terrain.size(); j < m; j++){
+            float x = terrain[i][j][0];
+            float y = terrain[i][j][1];
+            float z = terrain[i][j][2];
+            sommets.push_back(mesh.add_vertex(MyMesh::Point(x, y, z)));
+        }
+
+    }
+
+    //à partir du tableau de vertexHandle sommets
+    //on  construit les faces
+    vector<MyMesh::VertexHandle> uneNouvelleFace;
+    for(int y = 0; y < rows-1; y++){
+            for(int x = 0; x < cols-1; x++){
+
+                int p0 = y * rows + x;
+                int p1 = p0 + 1;
+                int p2 = p0 + rows;
+                int p3 = p2 + 1;
+
+                uneNouvelleFace.clear();
+                uneNouvelleFace.push_back(sommets[p0]);
+                uneNouvelleFace.push_back(sommets[p1]);
+                uneNouvelleFace.push_back(sommets[p2]);
+                mesh.add_face(uneNouvelleFace);
+
+                uneNouvelleFace.clear();
+                uneNouvelleFace.push_back(sommets[p3]);
+                uneNouvelleFace.push_back(sommets[p2]);
+                uneNouvelleFace.push_back(sommets[p1]);
+                mesh.add_face(uneNouvelleFace);
+
+            }
+        }
+
+    //si on veut dessiner les arêtes du mesh
+    for (MyMesh::EdgeIter curEdge = mesh.edges_begin(); curEdge != mesh.edges_end(); curEdge++)
+    {
+        //EdgeHandle eh = *curEdge;
+        //mesh.set_color(eh, MyMesh::Color(100, 100, 100));
+        //mesh.data(eh).thickness = 0.5;
+    }
+
+    //on ajoute 2 faces au mesh pour faire l'eau
+    /*float size = 10;
+
+    MyMesh::VertexHandle eau1 = mesh.add_vertex(MyMesh::Point(-size, -size, 0));
+    MyMesh::VertexHandle eau2 = mesh.add_vertex(MyMesh::Point(-size,  size, 0));
+    MyMesh::VertexHandle eau3 = mesh.add_vertex(MyMesh::Point( size,  size, 0));
+    MyMesh::VertexHandle eau4 = mesh.add_vertex(MyMesh::Point( size, -size, 0));
+
+    uneNouvelleFace.clear();
+    uneNouvelleFace.push_back(eau1);
+    uneNouvelleFace.push_back(eau4);
+    uneNouvelleFace.push_back(eau2);
+    mesh.add_face(uneNouvelleFace);
+
+    uneNouvelleFace.clear();
+    uneNouvelleFace.push_back(eau4);
+    uneNouvelleFace.push_back(eau3);
+    uneNouvelleFace.push_back(eau2);
+    mesh.add_face(uneNouvelleFace);
+    */
+    // pas pour diamant-carré
+
+    // on détermine la couleur de toutes les faces
+    for (MyMesh::FaceIter curFace = mesh.faces_begin(); curFace != mesh.faces_end(); curFace++)
+    {
+        FaceHandle fh = *curFace;
+        mesh.set_color(fh,calcColor(&mesh, fh));
+    }
 
      displayMesh(&mesh);
-
-
-
-
-
-
 }
 
 /* **** fin de la partie boutons et IHM **** */

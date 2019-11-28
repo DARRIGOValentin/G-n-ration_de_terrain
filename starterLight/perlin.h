@@ -150,6 +150,101 @@ vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
     return grid;
 }
 
-
+float RandomFloat(float a, float b) {
+    float random = ((float) rand()) / (float) RAND_MAX;
+    float diff = b - a;
+    float r = random * diff;
+    return a + r;
+}
 
 #endif // PERLIN_H
+
+
+vector<vector<QVector3D>> genereTerrainDiamantCarre(int s, float ha, float hb, int step)
+{
+    int size = pow(2,s) + 1;
+
+    vector<vector<QVector3D>> grid;
+    vector<QVector3D> line;
+
+    for(int y = 0;  y < size; y++){
+        line.clear();
+
+        for(int x = 0; x < size; x++){
+
+            float xp = (float)x/step;// - (cols*scale)/2;
+            float yp = (float)y/step;// - (rows*scale)/2;
+
+
+            //line.push_back(Vector3(xp- (scale/step)/2, yp- (scale/step)/2, zp));
+            line.push_back(QVector3D(xp-size/2, yp-size/2, 0));
+
+
+        }
+        grid.push_back(line);
+    }
+
+    grid[0][0].setZ(RandomFloat(ha,hb));
+    grid[0][size-1].setZ(RandomFloat(ha,hb));
+    grid[size-1][0].setZ(RandomFloat(ha,hb));
+    grid[size-1][size-1].setZ(RandomFloat(ha,hb));
+
+    int i = size - 1;
+    int id;
+    float moyenne;
+    int decalage;
+    float somme;
+    int n;
+
+    while(i > 1)
+    {
+        id = i/2;
+        for(int x = id; x < size; x += i)
+        {
+            for(int y = id; y < size; y += i)
+            {
+                moyenne = (grid[x-id][y-id].z() + grid[x-id][y+id].z() + grid[x+id][y+id].z() + grid[x+id][y-id].z()) / 4;
+                grid[x][y].setZ(moyenne + RandomFloat(-id,id));
+            }
+        }
+
+        decalage = 0;
+        for(int x = 0; x < size; x++)
+        {
+            if(decalage = 0)
+                decalage = id;
+            else
+                decalage = 0;
+            for(int y = 0; y < size; y++)
+            {
+                somme = 0;
+                n = 0;
+
+                if(x >= id)
+                {
+                    somme += grid[x-id][y].z();
+                    n++;
+                }
+                if(x + id < size)
+                {
+                    somme += grid[x+id][y].z();
+                    n++;
+                }
+                if(y >= id)
+                {
+                    somme += grid[x][y-id].z();
+                    n++;
+                }
+                if(y + id < size)
+                {
+                    somme += grid[x][y+id].z();
+                    n++;
+                }
+                grid[x][y].setZ((somme/n) + RandomFloat(-id,id)) ;
+            }
+        }
+        i = id;
+    }
+
+    return grid;
+}

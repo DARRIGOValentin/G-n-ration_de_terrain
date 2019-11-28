@@ -46,6 +46,8 @@ private slots:
 
     void on_pushButton_generer_clicked();
 
+    void on_pushButton_DiamantCarre_clicked();
+
 private:
 
     MyMesh mesh;
