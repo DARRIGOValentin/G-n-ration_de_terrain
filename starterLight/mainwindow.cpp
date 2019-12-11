@@ -70,13 +70,11 @@ MyMesh::Color calcColor(MyMesh* _mesh, FaceHandle fh){
 
 }
 
-// exemple pour construire un mesh face par face
-void MainWindow::on_pushButton_generer_clicked()
+void MainWindow::create_field()
 {
-
     MyMesh mesh;
 
-    vector<vector<QVector3D>> terrain  = genereTerrain(10, 10, 15);
+    vector<vector<QVector3D>> terrain  = genereTerrain(10, 10, 15, ui->octavesSlider->value(), (float)ui->persistenceSlider->value()/10.0, (float)ui->lacunaritySlider->value()/10.0);
 
     int cols =terrain[0].size();
     int rows = terrain.size();
@@ -162,19 +160,15 @@ void MainWindow::on_pushButton_generer_clicked()
 
 
      displayMesh(&mesh);
-
-
-
-
-
-
 }
 
-/* **** fin de la partie boutons et IHM **** */
+// exemple pour construire un mesh face par face
+void MainWindow::on_pushButton_generer_clicked()
+{
+    create_field();
+}
 
 
-
-/* **** fonctions supplémentaires **** */
 // permet d'initialiser les couleurs et les épaisseurs des élements du maillage
 void MainWindow::resetAllColorsAndThickness(MyMesh* _mesh)
 {
@@ -390,3 +384,23 @@ MainWindow::~MainWindow()
 }
 
 
+//------------------------------------ I H M -------------------------------------------
+
+
+void MainWindow::on_lacunaritySlider_sliderReleased()
+{
+    ui->valeur_lacunarity->setText(QString::number(ui->lacunaritySlider->value()/10.0));
+    create_field();
+}
+
+void MainWindow::on_octavesSlider_sliderReleased()
+{
+    ui->valeur_octaves->setText(QString::number(ui->octavesSlider->value()));
+    create_field();
+}
+
+void MainWindow::on_persistenceSlider_sliderReleased()
+{
+    ui->valeur_persistence->setText(QString::number(ui->persistenceSlider->value()/10.0));
+    create_field();
+}

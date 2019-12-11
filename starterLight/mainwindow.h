@@ -41,10 +41,20 @@ public:
     void displayMesh(MyMesh *_mesh, bool isTemperatureMap = false, float mapRange = -1);
     void resetAllColorsAndThickness(MyMesh* _mesh);
 
-private slots:
-    void on_pushButton_chargement_clicked();
+    int octaves = 0;
+    float persistence = (float)0;
+    float lacunarity = (float)0;
 
+private slots:
+    void create_field();
+    void on_pushButton_chargement_clicked();
     void on_pushButton_generer_clicked();
+
+    void on_lacunaritySlider_sliderReleased();
+
+    void on_octavesSlider_sliderReleased();
+
+    void on_persistenceSlider_sliderReleased();
 
 private:
 

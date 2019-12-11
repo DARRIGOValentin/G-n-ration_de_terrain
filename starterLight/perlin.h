@@ -58,6 +58,13 @@ grad2(const int hash, const float x, const float y)
     return x * GRAD3[h][0] + y * GRAD3[h][1];
 }
 
+static inline float
+grad3(const int hash, const float x, const float y, const float z)
+{
+    const int h = hash & 15;
+    return x * GRAD3[h][0] + y * GRAD3[h][1] + z * GRAD3[h][2];
+}
+
 float
 noise2(float x, float y, const float repeatx, const float repeaty, const int base)
 {
@@ -89,6 +96,45 @@ noise2(float x, float y, const float repeatx, const float repeaty, const int bas
                              grad2(PERM[BB], x - 1, y - 1)));
 }
 
+
+float
+noise3(float x, float y, float z, const float repeatx, const float repeaty, const float repeatz, const int base)
+{
+    float fx, fy, fz;
+    int A, AA, AB, B, BA, BB;
+    int i = (int)floorf(fmodf(x, repeatx));
+    int j = (int)floorf(fmodf(y, repeaty));
+    int k = (int)floorf(fmodf(z, repeatz));
+    int ii = (int)fmodf(i + 1, repeatx);
+    int jj = (int)fmodf(j + 1, repeaty);
+    int kk = (int)fmodf(z + 1, repeatz);
+    i = (i & 255) + base;
+    j = (j & 255) + base;
+    ii = (ii & 255) + base;
+    jj = (jj & 255) + base;
+
+    x -= floorf(x); y -= floorf(y); z -= floorf(z);
+    fx = x*x*x * (x * (x * 6 - 15) + 10);
+    fy = y*y*y * (y * (y * 6 - 15) + 10);
+    fz = z*z*z * (z * (z * 6 - 15) + 10);
+
+    A = PERM[i];
+    AA = PERM[A + j];
+    AB = PERM[A + jj];
+    B = PERM[ii];
+    BA = PERM[B + j];
+    BB = PERM[B + jj];
+
+    return lerp(fz,lerp(fy,    lerp(fx,    grad3(PERM[AA], x, y, z),
+                                            grad3(PERM[BA], x - 1, y, z)),
+                                lerp(fx,    grad3(PERM[AB], x, y - 1, z),
+                                            grad3(PERM[BB], x - 1, y - 1, z))),
+                    lerp(fy,    lerp(fx,    grad3(PERM[AA], x, y, z - 1),
+                                            grad3(PERM[BA], x - 1, y, z - 1)),
+                                lerp(fx,    grad3(PERM[AB], x, y - 1, z - 1),
+                                            grad3(PERM[BB], x - 1, y - 1, z - 1))));
+}
+
 float
 py_noise2(float x, float y, const int octaves, const float persistence, const float lacunarity, const float repeatx, const float repeaty, const int base)
 {
@@ -116,14 +162,37 @@ py_noise2(float x, float y, const int octaves, const float persistence, const fl
     return 0;
 }
 
-vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
+float
+py_noise3(float x, float y, float z, const int octaves, const float persistence, const float lacunarity, const float repeatx, const float repeaty, const float repeatz, const int base)
+{
+
+
+    if (octaves == 1) {
+        // Single octave, return simple noise
+        return noise3(x, y, z, repeatx, repeaty, repeatz, base);
+    } else if (octaves > 1) {
+        int i;
+        float freq = 1.0f;
+        float amp = 1.0f;
+        float max = 0.0f;
+        float total = 0.0f;
+
+        for (i = 0; i < octaves; i++) {
+            total += noise3(x * freq, y * freq, z * freq, repeatx * freq, repeaty * freq, repeatz * freq, base) * amp;
+            max += amp;
+            freq *= lacunarity;
+            amp *= persistence;
+        }
+        return (total / max);
+    }
+
+    return 0;
+}
+
+vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step, int octaves, float persistence, float lacunarity ) {
 
     vector<vector<QVector3D>> grid;
     vector<QVector3D> line;
-
-    int octaves = 6;
-    float persistence = 0.5;
-    float lacunarity = 2.0;
 
 
     for(int y = 0;  y < rows*step; y++){
@@ -136,7 +205,7 @@ vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
 
 
             //float zp = noise2(xp, yp, 1024, 1024, 0);
-            float zp = py_noise2(xp, yp, 6, 0.5, 2.0f, 1024, 1024, 0);
+            float zp = py_noise2(xp, yp,  octaves, persistence, lacunarity, 1024, 1024, 0);
 
 
             //line.push_back(Vector3(xp- (scale/step)/2, yp- (scale/step)/2, zp));
@@ -149,6 +218,42 @@ vector<vector<QVector3D>> genereTerrain(int rows, int cols, int step) {
 
     return grid;
 }
+
+/*vector<vector<QVector3D>> generePlanete(int meridien, int parallele) {
+
+    vector<vector<QVector3D>> grid;
+    vector<QVector3D> line;
+
+    int octaves = 6;
+    float persistence = 0.5;
+    float lacunarity = 2.0;
+
+
+    for(int y = 0;  y < rows; y++){
+        line.clear();
+
+        for(int x = 0; x < cols; x++){
+
+            float xp = (float)x/step;// - (cols*scale)/2;
+            float yp = (float)y/step;// - (rows*scale)/2;
+
+
+            //float zp = noise2(xp, yp, 1024, 1024, 0);
+            float zp = py_noise2(xp, yp,  8, 0.5, 2.0f, 1024, 1024, 0);
+
+
+            //line.push_back(Vector3(xp- (scale/step)/2, yp- (scale/step)/2, zp));
+            line.push_back(QVector3D(xp-cols/2, yp-rows/2, zp));
+
+
+        }
+        grid.push_back(line);
+    }
+
+    return grid;
+}*/
+
+
 
 
 
