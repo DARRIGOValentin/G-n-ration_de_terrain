@@ -3,28 +3,8 @@
 
 #include "perlin.h"
 #include <QDebug>
+#include <time.h>
 
-
-/* **** début de la partie boutons et IHM **** */
-
-
-// exemple pour charger un fichier .obj
-void MainWindow::on_pushButton_chargement_clicked()
-{
-    // fenêtre de sélection des fichiers
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Mesh"), "", tr("Mesh Files (*.obj)"));
-
-    // chargement du fichier .obj dans la variable globale "mesh"
-    OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
-
-    mesh.update_normals();
-
-    // initialisation des couleurs et épaisseurs (sommets et arêtes) du mesh
-    resetAllColorsAndThickness(&mesh);
-
-    // on affiche le maillage
-    displayMesh(&mesh);
-}
 
 MyMesh::Color calcColor(MyMesh* _mesh, FaceHandle fh){
 
@@ -49,13 +29,18 @@ MyMesh::Color calcColor(MyMesh* _mesh, FaceHandle fh){
 
     float d = somme/3.0f;
 
-    //qDebug() << d;
 
-    if (d > 0.3f)  return MyMesh::Color(255, 255, 255);
-    else if (d > 0.2f) return MyMesh::Color(155, 60, 60);
-    else if (d > 0.0f) return MyMesh::Color(0, 200, 0);
+    if (d > 1.2f)  return MyMesh::Color(255, 255, 255);
+    else if (d > 1.1f) return MyMesh::Color(200, 201, 176);
+    else if (d > 0.9f) return MyMesh::Color(180, 181, 156);
+    else if (d > 0.8f) return MyMesh::Color(135, 120, 110);
+    else if (d > 0.6f) return MyMesh::Color(155, 60, 60);
+    else if (d > 0.45f) return MyMesh::Color(0, 150, 0);
+    else if (d > 0.3f) return MyMesh::Color(0, 175, 0);
+    else if (d > 0.15f) return MyMesh::Color(0, 200, 0);
+    else if (d > 0.0f) return MyMesh::Color(0, 100, 250);
 
-    else if (d <= 0.0f){
+    else if (d <= 0.0){
 
         //si au moins 1 des points de la faces
         //est audessus du niveau de la mer
@@ -65,16 +50,66 @@ MyMesh::Color calcColor(MyMesh* _mesh, FaceHandle fh){
             if (zs[i] > 0.0f) return MyMesh::Color(0, 200, 0);
         }
 
-        return MyMesh::Color(0, 0, 200);
+        return MyMesh::Color(0, 0, 220);
+    }
+}
+
+MyMesh::Color calcColor_archipel(MyMesh* _mesh, FaceHandle fh)
+{
+    //fonction basée sur calcColor mais dont l'utilité est strictement réservée aux archipels
+
+    float zs [3];
+    int i = 0;
+    for (MyMesh::FaceVertexIter curVert = _mesh->fv_iter(fh); curVert.is_valid(); curVert ++)
+       {
+           //qDebug() << "    vertID :" << (*curVert).idx();
+            VertexHandle vh = *curVert;
+            zs[i] = _mesh->point(vh)[2];
+            i++;
+            //if(_mesh->point(vh)[2] < -0.4f)
+                //qDebug() << _mesh->point(vh)[2];
+       }
+
+    float somme = 0;
+    for(int i = 0; i < 3; i++){
+        somme += zs[i];
     }
 
+    float d = somme/3.0f;
+
+
+    if (d > 1.2f)  return MyMesh::Color(255, 255, 255);
+    else if (d > 1.1f) return MyMesh::Color(200, 201, 176);
+    else if (d > 0.9f) return MyMesh::Color(180, 181, 156);
+    else if (d > 0.8f) return MyMesh::Color(135, 120, 110);
+    else if (d > 0.6f) return MyMesh::Color(155, 60, 60);
+    else if (d > 0.45f) return MyMesh::Color(0, 150, 0);
+    else if (d > 0.3f) return MyMesh::Color(0, 175, 0);
+    else if (d > 0.15f) return MyMesh::Color(0, 180, 0);
+    else if (d > 0.0f) return MyMesh::Color(0, 200, 0);
+
+    else if (d <= 0.0){
+
+        //si au moins 1 des points de la faces
+        //est audessus du niveau de la mer
+        //alors la face est verte
+        //sinon elle est bleu
+        for(int i = 0; i < 3; i++){
+            if (zs[i] > 0.0f) return MyMesh::Color(0, 200, 255);
+        }
+
+        return MyMesh::Color(0, 0, 250);
+    }
 }
 
 void MainWindow::create_field()
 {
-    MyMesh mesh;
+    MyMesh mesha;
 
-    vector<vector<QVector3D>> terrain  = genereTerrain(10, 10, 15, ui->octavesSlider->value(), (float)ui->persistenceSlider->value()/10.0, (float)ui->lacunaritySlider->value()/10.0);
+    if(method != "Par slider"){
+        mise_a_jour_variables();
+    }
+    vector<vector<QVector3D>> terrain  = genereTerrain(10, 10, 15, octaves, persistence, lacunarity);
 
     int cols =terrain[0].size();
     int rows = terrain.size();
@@ -83,6 +118,8 @@ void MainWindow::create_field()
     //dans un tableau de VertexHandle sommets
     vector<MyMesh::VertexHandle> sommets;
     vector<float> xs, ys, zs;
+    float z_min = 0;
+    float z_max = -5000;
 
     vector<MyMesh::VertexHandle> line;
     for(int i = 0, n = terrain[0].size(); i < n; i++){
@@ -91,9 +128,27 @@ void MainWindow::create_field()
             float x = terrain[i][j][0];
             float y = terrain[i][j][1];
             float z = terrain[i][j][2];
-            sommets.push_back(mesh.add_vertex(MyMesh::Point(x, y, z)));
+            sommets.push_back(mesha.add_vertex(MyMesh::Point(x, y, z)));
+            if(z < z_min){
+                z_min = z;
+            }
+            if(z > z_max){
+                z_max = z;
+            }
         }
+    }
+    qDebug() << "z_min = " << z_min;
+    qDebug() << "z_max = " << z_max;
 
+    if(paysage != "Archipel"){
+        for (MyMesh::VertexIter curVert = mesha.vertices_begin(); curVert != mesha.vertices_end(); curVert++){
+            mesha.set_point((*curVert), MyMesh::Point(mesha.point(*curVert)[0], mesha.point(*curVert)[1], mesha.point(*curVert)[2] + abs(z_min)));
+        }
+    }
+    else{
+        for (MyMesh::VertexIter curVert = mesha.vertices_begin(); curVert != mesha.vertices_end(); curVert++){
+            mesha.set_point((*curVert), MyMesh::Point(mesha.point(*curVert)[0], mesha.point(*curVert)[1], mesha.point(*curVert)[2]));
+        }
     }
 
     //à partir du tableau de vertexHandle sommets
@@ -111,63 +166,63 @@ void MainWindow::create_field()
                 uneNouvelleFace.push_back(sommets[p0]);
                 uneNouvelleFace.push_back(sommets[p1]);
                 uneNouvelleFace.push_back(sommets[p2]);
-                mesh.add_face(uneNouvelleFace);
+                mesha.add_face(uneNouvelleFace);
 
                 uneNouvelleFace.clear();
                 uneNouvelleFace.push_back(sommets[p3]);
                 uneNouvelleFace.push_back(sommets[p2]);
                 uneNouvelleFace.push_back(sommets[p1]);
-                mesh.add_face(uneNouvelleFace);
+                mesha.add_face(uneNouvelleFace);
 
             }
-        }
-
-    //si on veut dessiner les arêtes du mesh
-    for (MyMesh::EdgeIter curEdge = mesh.edges_begin(); curEdge != mesh.edges_end(); curEdge++)
-    {
-        //EdgeHandle eh = *curEdge;
-        //mesh.set_color(eh, MyMesh::Color(100, 100, 100));
-        //mesh.data(eh).thickness = 0.5;
     }
 
-    //on ajoute 2 faces au mesh pour faire l'eau
-    float size = 10;
+    /*if(paysage == "Archipel"){
+        //on ajoute 2 faces au mesh pour faire l'eau
+        float size = 5;
 
-    MyMesh::VertexHandle eau1 = mesh.add_vertex(MyMesh::Point(-size, -size, 0));
-    MyMesh::VertexHandle eau2 = mesh.add_vertex(MyMesh::Point(-size,  size, 0));
-    MyMesh::VertexHandle eau3 = mesh.add_vertex(MyMesh::Point( size,  size, 0));
-    MyMesh::VertexHandle eau4 = mesh.add_vertex(MyMesh::Point( size, -size, 0));
+        MyMesh::VertexHandle eau1 = mesh.add_vertex(MyMesh::Point(-size, -size, 0));
+        MyMesh::VertexHandle eau2 = mesh.add_vertex(MyMesh::Point(-size,  size, 0));
+        MyMesh::VertexHandle eau3 = mesh.add_vertex(MyMesh::Point( size,  size, 0));
+        MyMesh::VertexHandle eau4 = mesh.add_vertex(MyMesh::Point( size, -size, 0));
 
-    uneNouvelleFace.clear();
-    uneNouvelleFace.push_back(eau1);
-    uneNouvelleFace.push_back(eau4);
-    uneNouvelleFace.push_back(eau2);
-    mesh.add_face(uneNouvelleFace);
+        uneNouvelleFace.clear();
+        uneNouvelleFace.push_back(eau1);
+        uneNouvelleFace.push_back(eau4);
+        uneNouvelleFace.push_back(eau2);
+        mesh.add_face(uneNouvelleFace);
 
-    uneNouvelleFace.clear();
-    uneNouvelleFace.push_back(eau4);
-    uneNouvelleFace.push_back(eau3);
-    uneNouvelleFace.push_back(eau2);
-    mesh.add_face(uneNouvelleFace);
+        uneNouvelleFace.clear();
+        uneNouvelleFace.push_back(eau4);
+        uneNouvelleFace.push_back(eau3);
+        uneNouvelleFace.push_back(eau2);
+        mesh.add_face(uneNouvelleFace);
+    }*/
 
     // on détermine la couleur de toutes les faces
-    for (MyMesh::FaceIter curFace = mesh.faces_begin(); curFace != mesh.faces_end(); curFace++)
-    {
-        FaceHandle fh = *curFace;
-        mesh.set_color(fh,calcColor(&mesh, fh));
+    if(paysage != "Archipel"){
+        for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
+        {
+            FaceHandle fh = *curFace;
+            mesha.set_color(fh,calcColor(&mesha, fh));
+        }
     }
-
-
-
-     displayMesh(&mesh);
+    else{
+        for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
+        {
+            FaceHandle fh = *curFace;
+            mesha.set_color(fh,calcColor_archipel(&mesha, fh));
+        }
+        for (MyMesh::VertexIter curVert = mesha.vertices_begin(); curVert != mesha.vertices_end(); curVert++){
+            if(mesha.point(*curVert)[2] < 0){
+                mesha.set_point((*curVert), MyMesh::Point(mesha.point(*curVert)[0], mesha.point(*curVert)[1], 0));
+            }
+        }
+    }
+    mesh = mesha;
+    displayMesh(&mesh);
+    method = "Par critère";
 }
-
-// exemple pour construire un mesh face par face
-void MainWindow::on_pushButton_generer_clicked()
-{
-    create_field();
-}
-
 
 // permet d'initialiser les couleurs et les épaisseurs des élements du maillage
 void MainWindow::resetAllColorsAndThickness(MyMesh* _mesh)
@@ -372,9 +427,36 @@ void MainWindow::displayMesh(MyMesh* _mesh, bool isTemperatureMap, float mapRang
     delete[] pointsVerts;
 }
 
+void MainWindow::mise_a_jour_variables(){
+    if(ui->comboBox->currentText() == "Montagnes"){
+        octaves = rand()%3+6;
+        persistence = ((float)rand()/RAND_MAX)*0.3;
+        lacunarity = ((float)rand()/RAND_MAX)*2.0+3.0;
+        altitude = 2.0;
+    }
+    if(ui->comboBox->currentText() == "Plaines"){
+        octaves = rand()%2+2;
+        persistence = ((float)rand()/RAND_MAX)+1.0;
+        lacunarity = ((float)rand()/RAND_MAX)*0.2+0.1;
+        altitude = 2.0;
+    }
+    if(ui->comboBox->currentText() == "Archipel"){
+        octaves = rand()%2+2;
+        persistence = ((float)rand()/RAND_MAX)+1.0;
+        lacunarity = ((float)rand()/RAND_MAX)*0.2+0.1;
+        altitude = 2.0;
+    }
+    paysage = ui->comboBox->currentText();
+    ui->valeur_octaves->setText(QString::number(octaves));
+    ui->valeur_persistence->setText(QString::number(persistence));
+    ui->valeur_lacunarity->setText(QString::number(lacunarity));
+
+
+}
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
+    srand(time(nullptr));
     ui->setupUi(this);
 }
 
@@ -386,21 +468,72 @@ MainWindow::~MainWindow()
 
 //------------------------------------ I H M -------------------------------------------
 
+void MainWindow::on_pushButton_generer_clicked()
+{
+    create_field();
+}
 
 void MainWindow::on_lacunaritySlider_sliderReleased()
 {
     ui->valeur_lacunarity->setText(QString::number(ui->lacunaritySlider->value()/10.0));
+    lacunarity = ui->lacunaritySlider->value()/10.0;
+    method = "Par slider";
     create_field();
 }
 
 void MainWindow::on_octavesSlider_sliderReleased()
 {
     ui->valeur_octaves->setText(QString::number(ui->octavesSlider->value()));
+    octaves = ui->octavesSlider->value();
+    method = "Par slider";
     create_field();
 }
 
 void MainWindow::on_persistenceSlider_sliderReleased()
 {
     ui->valeur_persistence->setText(QString::number(ui->persistenceSlider->value()/10.0));
+    persistence = ui->persistenceSlider->value()/10.0;
+    method = "Par slider";
     create_field();
+}
+
+// exemple pour charger un fichier .obj
+void MainWindow::on_pushButton_chargement_clicked()
+{
+    // fenêtre de sélection des fichiers
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Mesh"), "", tr("Mesh Files (*.obj)"));
+
+    // chargement du fichier .obj dans la variable globale "mesh"
+    OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
+
+    mesh.update_normals();
+
+    // initialisation des couleurs et épaisseurs (sommets et arêtes) du mesh
+    resetAllColorsAndThickness(&mesh);
+
+    // on affiche le maillage
+    displayMesh(&mesh);
+}
+
+void MainWindow::on_pushButton_aretes_clicked()
+{
+    if(aretes_activated == false){
+        for (MyMesh::EdgeIter curEdge = mesh.edges_begin(); curEdge != mesh.edges_end(); curEdge++)
+        {
+            EdgeHandle eh = *curEdge;
+            mesh.set_color(eh, MyMesh::Color(150, 150, 150));
+            mesh.data(eh).thickness = 0.5;
+        }
+        aretes_activated = true;
+    }
+    else{
+        for (MyMesh::EdgeIter curEdge = mesh.edges_begin(); curEdge != mesh.edges_end(); curEdge++)
+        {
+            EdgeHandle eh = *curEdge;
+            mesh.set_color(eh, MyMesh::Color(150, 150, 150));
+            mesh.data(eh).thickness = 0.0;
+        }
+        aretes_activated = false;
+    }
+    displayMesh(&mesh);
 }

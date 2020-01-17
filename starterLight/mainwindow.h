@@ -44,17 +44,22 @@ public:
     int octaves = 0;
     float persistence = (float)0;
     float lacunarity = (float)0;
+    float altitude = (float)0;
+
+    QString method = "Par critère";
+    QString paysage = "none";
+
+    bool aretes_activated = false;
 
 private slots:
     void create_field();
     void on_pushButton_chargement_clicked();
     void on_pushButton_generer_clicked();
-
     void on_lacunaritySlider_sliderReleased();
-
     void on_octavesSlider_sliderReleased();
-
     void on_persistenceSlider_sliderReleased();
+    void mise_a_jour_variables();
+    void on_pushButton_aretes_clicked();
 
 private:
 
