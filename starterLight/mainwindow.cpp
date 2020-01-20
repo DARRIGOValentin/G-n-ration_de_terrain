@@ -86,9 +86,10 @@ MyMesh::Color calcColor_archipel(MyMesh* _mesh, FaceHandle fh)
     else if (d > 0.45f) return MyMesh::Color(0, 150, 0);
     else if (d > 0.3f) return MyMesh::Color(0, 175, 0);
     else if (d > 0.15f) return MyMesh::Color(0, 180, 0);
-    else if (d > 0.0f) return MyMesh::Color(0, 200, 0);
+    else if (d > 0.10f) return MyMesh::Color(0, 200, 0);
+    else if (d > 0.05f) return MyMesh::Color(247, 255 ,60);
 
-    else if (d <= 0.0){
+    else if (d <= 0.5){
 
         //si au moins 1 des points de la faces
         //est audessus du niveau de la mer
@@ -101,6 +102,96 @@ MyMesh::Color calcColor_archipel(MyMesh* _mesh, FaceHandle fh)
         return MyMesh::Color(0, 0, 250);
     }
 }
+
+MyMesh::Color calcColor_foret(MyMesh* _mesh, FaceHandle fh)
+{
+    //fonction basée sur calcColor mais dont l'utilité est strictement réservée aux archipels
+
+    float zs [3];
+    int i = 0;
+    for (MyMesh::FaceVertexIter curVert = _mesh->fv_iter(fh); curVert.is_valid(); curVert ++)
+       {
+           //qDebug() << "    vertID :" << (*curVert).idx();
+            VertexHandle vh = *curVert;
+            zs[i] = _mesh->point(vh)[2];
+            i++;
+            //if(_mesh->point(vh)[2] < -0.4f)
+                //qDebug() << _mesh->point(vh)[2];
+       }
+
+    float somme = 0;
+    for(int i = 0; i < 3; i++){
+        somme += zs[i];
+    }
+
+    float d = somme/3.0f;
+
+
+    if (d > 1.0f)  return MyMesh::Color(100, 100, 100);
+    else if (d > 0.75f) return MyMesh::Color(0, 150, 0);
+    else if (d > 0.50f) return MyMesh::Color(0, 175, 0);
+    else if (d > 0.25f) return MyMesh::Color(0, 180, 0);
+    else if (d > 0.1f) return MyMesh::Color(0, 200 ,0);
+
+    else if (d <= 0.1){
+
+        //si au moins 1 des points de la faces
+        //est audessus du niveau de la mer
+        //alors la face est verte
+        //sinon elle est bleue
+        for(int i = 0; i < 3; i++){
+            if (zs[i] > 0.0f) return MyMesh::Color(0, 200, 255);
+        }
+
+        return MyMesh::Color(0, 0, 250);
+    }
+}
+
+MyMesh::Color calcColor_plaines(MyMesh* _mesh, FaceHandle fh)
+{
+    //fonction basée sur calcColor mais dont l'utilité est strictement réservée aux archipels
+
+    float zs [3];
+    int i = 0;
+    for (MyMesh::FaceVertexIter curVert = _mesh->fv_iter(fh); curVert.is_valid(); curVert ++)
+       {
+           //qDebug() << "    vertID :" << (*curVert).idx();
+            VertexHandle vh = *curVert;
+            zs[i] = _mesh->point(vh)[2];
+            i++;
+            //if(_mesh->point(vh)[2] < -0.4f)
+                //qDebug() << _mesh->point(vh)[2];
+       }
+
+    float somme = 0;
+    for(int i = 0; i < 3; i++){
+        somme += zs[i];
+    }
+
+    float d = somme/3.0f;
+
+
+    if (d > 0.45f)  return MyMesh::Color(0, 130, 0);
+    else if (d > 0.40f) return MyMesh::Color(0, 150 ,0);
+    else if (d > 0.40f) return MyMesh::Color(0, 180 ,0);
+    else if (d > 0.30f) return MyMesh::Color(255, 255 ,0);
+    else if (d > 0.1f) return MyMesh::Color(255, 215 ,0);
+
+    else if (d <= 0.1){
+
+        //si au moins 1 des points de la faces
+        //est audessus du niveau de la mer
+        //alors la face est verte
+        //sinon elle est bleue
+        for(int i = 0; i < 3; i++){
+            if (zs[i] > 0.0f) return MyMesh::Color(0, 200, 255);
+        }
+
+        return MyMesh::Color(0, 0, 250);
+    }
+}
+
+
 
 void MainWindow::create_field()
 {
@@ -200,14 +291,7 @@ void MainWindow::create_field()
     }*/
 
     // on détermine la couleur de toutes les faces
-    if(paysage != "Archipel"){
-        for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
-        {
-            FaceHandle fh = *curFace;
-            mesha.set_color(fh,calcColor(&mesha, fh));
-        }
-    }
-    else{
+    if(paysage == "Archipel"){
         for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
         {
             FaceHandle fh = *curFace;
@@ -217,6 +301,37 @@ void MainWindow::create_field()
             if(mesha.point(*curVert)[2] < 0){
                 mesha.set_point((*curVert), MyMesh::Point(mesha.point(*curVert)[0], mesha.point(*curVert)[1], 0));
             }
+        }
+    }
+    else if(paysage == "Forêt"){
+        for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
+        {
+            FaceHandle fh = *curFace;
+            mesha.set_color(fh,calcColor_foret(&mesha, fh));
+        }
+        for (MyMesh::VertexIter curVert = mesha.vertices_begin(); curVert != mesha.vertices_end(); curVert++){
+            if(mesha.point(*curVert)[2] < 0){
+                mesha.set_point((*curVert), MyMesh::Point(mesha.point(*curVert)[0], mesha.point(*curVert)[1], 0));
+            }
+        }
+    }
+    else if(paysage == "Plaines"){
+        for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
+        {
+            FaceHandle fh = *curFace;
+            mesha.set_color(fh,calcColor_plaines(&mesha, fh));
+        }
+        for (MyMesh::VertexIter curVert = mesha.vertices_begin(); curVert != mesha.vertices_end(); curVert++){
+            if(mesha.point(*curVert)[2] < 0){
+                mesha.set_point((*curVert), MyMesh::Point(mesha.point(*curVert)[0], mesha.point(*curVert)[1], 0));
+            }
+        }
+    }
+    else{
+        for (MyMesh::FaceIter curFace = mesha.faces_begin(); curFace != mesha.faces_end(); curFace++)
+        {
+            FaceHandle fh = *curFace;
+            mesha.set_color(fh,calcColor(&mesha, fh));
         }
     }
     mesh = mesha;
@@ -444,6 +559,12 @@ void MainWindow::mise_a_jour_variables(){
         octaves = rand()%2+2;
         persistence = ((float)rand()/RAND_MAX)+1.0;
         lacunarity = ((float)rand()/RAND_MAX)*0.2+0.1;
+        altitude = 2.0;
+    }
+    if(ui->comboBox->currentText() == "Forêt"){
+        octaves = rand()%2+2;
+        persistence = ((float)rand()/RAND_MAX)+2.0;
+        lacunarity = ((float)rand()/RAND_MAX)*0.5+1.0;
         altitude = 2.0;
     }
     paysage = ui->comboBox->currentText();
